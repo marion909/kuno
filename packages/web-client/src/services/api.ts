@@ -1,0 +1,107 @@
+import { config } from '../config';
+
+export interface AuthResponse {
+  success: boolean;
+  data?: {
+    user: {
+      id: string;
+      username: string;
+    };
+    device: {
+      id: number;
+      deviceName: string;
+      registrationId: number;
+    };
+    token: string;
+  };
+  error?: string;
+}
+
+export class ApiService {
+  private token: string | null = null;
+
+  setToken(token: string) {
+    this.token = token;
+    localStorage.setItem('auth_token', token);
+  }
+
+  getToken(): string | null {
+    if (!this.token) {
+      this.token = localStorage.getItem('auth_token');
+    }
+    return this.token;
+  }
+
+  clearToken() {
+    this.token = null;
+    localStorage.removeItem('auth_token');
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${config.apiUrl}${endpoint}`;
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Network error' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Auth endpoints
+  async register(username: string, password: string, deviceName: string = 'Web Browser'): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, deviceName }),
+    });
+  }
+
+  async login(username: string, password: string, deviceName: string = 'Web Browser'): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, deviceName }),
+    });
+  }
+
+  async getMe(): Promise<any> {
+    return this.request('/api/auth/me');
+  }
+
+  // PreKey endpoints
+  async uploadPreKeys(data: {
+    identityKey: string;
+    signedPreKey: { id: number; publicKey: string; signature: string };
+    oneTimePreKeys: { id: number; publicKey: string }[];
+  }): Promise<any> {
+    return this.request('/api/keys/upload', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPreKeyBundle(username: string): Promise<any> {
+    return this.request(`/api/keys/${username}`);
+  }
+
+  async getPreKeyStatus(): Promise<any> {
+    return this.request('/api/keys/status');
+  }
+}
+
+export const api = new ApiService();
