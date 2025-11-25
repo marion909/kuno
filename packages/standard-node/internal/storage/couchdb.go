@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-kivik/kivik/v4"
-	_ "github.com/go-kivik/couchdb/v4"
+	"github.com/go-kivik/kivik"
+	_ "github.com/go-kivik/couchdb"
 )
 
 type CouchDBStorage struct {
@@ -62,7 +62,7 @@ func NewCouchDBStorage(url, username, password, dbName string) (*CouchDBStorage,
 }
 
 func (s *CouchDBStorage) SaveMessage(ctx context.Context, msg *Message) error {
-	_, err := s.db.Put(ctx, msg.ID, msg)
+	_, _, err := s.db.CreateDoc(ctx, msg)
 	return err
 }
 

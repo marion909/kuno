@@ -87,6 +87,7 @@ export class SignalProtocolService {
 
       // Store in IndexedDB
       await db.preKeys.add({
+        id: i,
         keyId: i,
         publicKey: JSON.stringify(publicKeyData),
         privateKey: JSON.stringify(privateKeyData),
@@ -130,7 +131,7 @@ export class SignalProtocolService {
   /**
    * Encrypt a message for a recipient
    */
-  async encrypt(recipientBundle: any, plaintext: string): Promise<{
+  async encrypt(_recipientBundle: any, plaintext: string): Promise<{
     encryptedPayload: string;
     messageType: 'prekey' | 'whisper';
   }> {
@@ -179,7 +180,7 @@ export class SignalProtocolService {
   /**
    * Decrypt a received message
    */
-  async decrypt(encryptedPayload: string, messageType: 'prekey' | 'whisper'): Promise<string> {
+  async decrypt(encryptedPayload: string, _messageType: 'prekey' | 'whisper'): Promise<string> {
     // Simplified decryption for MVP
     const payload = JSON.parse(atob(encryptedPayload));
 
@@ -221,7 +222,7 @@ export class SignalProtocolService {
   /**
    * Helper: Sign data with identity key
    */
-  private async signData(data: any): string {
+  private async signData(data: any): Promise<string> {
     // Simplified signature for MVP
     const dataString = JSON.stringify(data);
     const encoder = new TextEncoder();

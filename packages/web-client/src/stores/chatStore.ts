@@ -31,6 +31,8 @@ interface ChatState {
   setActiveConversation: (username: string) => void;
   sendMessage: (recipientUsername: string, text: string) => Promise<void>;
   addMessage: (message: Message) => void;
+  handleIncomingMessage: (payload: any) => Promise<void>;
+  handleMessageAck: (payload: any) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({

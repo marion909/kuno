@@ -9,12 +9,7 @@ import { keyRoutes } from './routes/keys';
 import { websocketRoutes } from './routes/websocket';
 
 const app = Fastify({
-  logger: {
-    level: 'info',
-    transport: {
-      target: 'pino-pretty',
-    },
-  },
+  logger: true,
 });
 
 // Extend FastifyInstance with authenticate decorator and pg

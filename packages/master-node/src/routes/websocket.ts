@@ -64,8 +64,8 @@ export async function websocketRoutes(app: FastifyInstance) {
         try {
           const data = JSON.parse(rawData.toString());
           await handleWebSocketMessage(app, client!, data);
-        } catch (error) {
-          app.log.error('Error handling WebSocket message:', error);
+        } catch (error: unknown) {
+          app.log.error({ error }, 'Error handling WebSocket message');
           socket.socket.send(JSON.stringify({
             type: 'error',
             payload: { message: 'Failed to process message' },
@@ -81,8 +81,8 @@ export async function websocketRoutes(app: FastifyInstance) {
         }
       });
 
-    } catch (error) {
-      app.log.error('WebSocket authentication failed:', error);
+    } catch (error: unknown) {
+      app.log.error({ error }, 'WebSocket authentication failed');
       socket.socket.close(4001, 'Authentication failed');
     }
   });
@@ -181,11 +181,12 @@ async function handleSendMessage(app: FastifyInstance, sender: Client, payload: 
 
     app.log.info(`Message routed: ${sender.username} -> ${recipientUsername}`);
 
-  } catch (error) {
-    app.log.error('Error sending message:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    app.log.error({ err: error }, 'Error sending message');
     sender.socket.send(JSON.stringify({
       type: 'error',
-      payload: { message: 'Failed to send message' },
+      payload: { message: 'Failed to send message', error: errorMessage },
     }));
   }
 }
