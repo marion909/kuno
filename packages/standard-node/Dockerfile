@@ -6,16 +6,19 @@ RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
-
-# Download dependencies with fallback to direct GitHub
-ENV GOPROXY=https://proxy.golang.org,direct
-ENV GOPRIVATE=""
-RUN go mod download
-
-# Copy source
+# Copy everything including vendor directory
 COPY . .
+
+# Verify go.mod and go.sum exist
+RUN test -f go.mod || (echo "go.mod not found" && exit 1)
+
+# Use vendored dependencies if available, otherwise download
+RUN if [ -d vendor ]; then \
+        echo "Using vendored dependencies"; \
+    else \
+        echo "Downloading dependencies"; \
+        go mod download || go mod vendor; \
+    fi
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
