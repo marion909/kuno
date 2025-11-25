@@ -19,8 +19,10 @@ RUN npm install
 WORKDIR /app/packages/shared
 RUN npm run build
 
-# Build web-client
+# Build web-client with production API URL
 WORKDIR /app/packages/web-client
+ARG VITE_API_URL=https://npanel.at
+ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 # Production stage with nginx

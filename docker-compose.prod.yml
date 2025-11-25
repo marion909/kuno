@@ -159,6 +159,8 @@ services:
     build:
       context: .
       dockerfile: ./packages/web-client/Dockerfile
+      args:
+        VITE_API_URL: https://npanel.at
     container_name: kuno-nginx
     ports:
       - "80:80"
