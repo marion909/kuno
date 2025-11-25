@@ -31,23 +31,28 @@ for COUCH in "$COUCH1" "$COUCH2" "$COUCH3"; do
   curl -X PUT "$COUCH/$DB_NAME" || echo "Database may already exist"
 done
 
+echo ""
+echo "📦 Ensuring _replicator database exists..."
+curl -X PUT "$COUCH1/_replicator" 2>/dev/null || true
+curl -X PUT "$COUCH2/_replicator" 2>/dev/null || true
+curl -X PUT "$COUCH3/_replicator" 2>/dev/null || true
+
+echo ""
 # Setup bidirectional replication
 # Node 1 <-> Node 2
 echo "🔄 Setting up replication: Node 1 <-> Node 2"
-curl -X POST "$COUCH1/_replicator" \
+curl -X PUT "$COUCH1/_replicator/node1-to-node2" \
   -H "Content-Type: application/json" \
   -d "{
-    \"_id\": \"node1-to-node2\",
     \"source\": \"$DB_NAME\",
     \"target\": \"$COUCH2/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
 
-curl -X POST "$COUCH2/_replicator" \
+curl -X PUT "$COUCH2/_replicator/node2-to-node1" \
   -H "Content-Type: application/json" \
   -d "{
-    \"_id\": \"node2-to-node1\",
     \"source\": \"$DB_NAME\",
     \"target\": \"$COUCH1/$DB_NAME\",
     \"continuous\": true,
@@ -56,20 +61,18 @@ curl -X POST "$COUCH2/_replicator" \
 
 # Node 2 <-> Node 3
 echo "🔄 Setting up replication: Node 2 <-> Node 3"
-curl -X POST "$COUCH2/_replicator" \
+curl -X PUT "$COUCH2/_replicator/node2-to-node3" \
   -H "Content-Type: application/json" \
   -d "{
-    \"_id\": \"node2-to-node3\",
     \"source\": \"$DB_NAME\",
     \"target\": \"$COUCH3/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
 
-curl -X POST "$COUCH3/_replicator" \
+curl -X PUT "$COUCH3/_replicator/node3-to-node2" \
   -H "Content-Type: application/json" \
   -d "{
-    \"_id\": \"node3-to-node2\",
     \"source\": \"$DB_NAME\",
     \"target\": \"$COUCH2/$DB_NAME\",
     \"continuous\": true,
@@ -78,20 +81,18 @@ curl -X POST "$COUCH3/_replicator" \
 
 # Node 1 <-> Node 3
 echo "🔄 Setting up replication: Node 1 <-> Node 3"
-curl -X POST "$COUCH1/_replicator" \
+curl -X PUT "$COUCH1/_replicator/node1-to-node3" \
   -H "Content-Type: application/json" \
   -d "{
-    \"_id\": \"node1-to-node3\",
     \"source\": \"$DB_NAME\",
     \"target\": \"$COUCH3/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
 
-curl -X POST "$COUCH3/_replicator" \
+curl -X PUT "$COUCH3/_replicator/node3-to-node1" \
   -H "Content-Type: application/json" \
   -d "{
-    \"_id\": \"node3-to-node1\",
     \"source\": \"$DB_NAME\",
     \"target\": \"$COUCH1/$DB_NAME\",
     \"continuous\": true,
