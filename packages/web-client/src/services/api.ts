@@ -37,6 +37,30 @@ export class ApiService {
     localStorage.removeItem('auth_token');
   }
 
+  private async requestWithRetry<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    retries: number = 3,
+    delay: number = 1000
+  ): Promise<T> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await this.request<T>(endpoint, options);
+      } catch (error: any) {
+        const isLastRetry = i === retries - 1;
+        const shouldRetry = error.message === 'Network error' || error.message?.includes('503');
+        
+        if (isLastRetry || !shouldRetry) {
+          throw error;
+        }
+        
+        console.log(`Retry ${i + 1}/${retries} for ${endpoint} after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+      }
+    }
+    throw new Error('Max retries exceeded');
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -80,7 +104,7 @@ export class ApiService {
   }
 
   async getMe(): Promise<any> {
-    return this.request('/api/auth/me');
+    return this.requestWithRetry('/api/auth/me', {}, 3, 1000);
   }
 
   // PreKey endpoints

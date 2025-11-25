@@ -6,8 +6,6 @@
  * Production version should use the full Signal Protocol
  */
 
-import { db } from '../lib/db';
-
 // Simple crypto utilities using Web Crypto API
 export class SignalProtocolService {
   private identityKeyPair: CryptoKeyPair | null = null;
@@ -17,13 +15,13 @@ export class SignalProtocolService {
    * Initialize Signal Protocol with identity keys
    */
   async initialize(): Promise<void> {
-    // Check if we have existing identity
-    const stored = await db.identity.get('local');
+    // Check if we have existing identity in localStorage
+    const storedIdentity = localStorage.getItem('signal_identity');
     
-    if (stored) {
+    if (storedIdentity) {
       // Load existing identity
-      this.registrationId = stored.registrationId;
-      // Note: In production, deserialize actual key pair from stored.identityKeyPair
+      const identityData = JSON.parse(storedIdentity);
+      this.registrationId = identityData.registrationId;
       console.log('Loaded existing identity, registration ID:', this.registrationId);
     } else {
       // Generate new identity
@@ -47,16 +45,17 @@ export class SignalProtocolService {
 
     this.registrationId = Math.floor(Math.random() * 2147483647);
 
-    // Export and store
+    // Export and store in localStorage
     const publicKeyData = await crypto.subtle.exportKey('jwk', this.identityKeyPair.publicKey);
     const privateKeyData = await crypto.subtle.exportKey('jwk', this.identityKeyPair.privateKey);
 
-    await db.identity.add({
-      id: 'local',
-      identityKeyPair: JSON.stringify({ public: publicKeyData, private: privateKeyData }),
+    const identityData = {
+      identityKeyPair: { public: publicKeyData, private: privateKeyData },
       registrationId: this.registrationId,
       createdAt: Date.now(),
-    });
+    };
+
+    localStorage.setItem('signal_identity', JSON.stringify(identityData));
 
     console.log('Generated new identity, registration ID:', this.registrationId);
   }
@@ -70,6 +69,7 @@ export class SignalProtocolService {
     oneTimePreKeys: { id: number; publicKey: string }[];
   }> {
     const preKeys: { id: number; publicKey: string }[] = [];
+    const preKeysStorage: any = {};
 
     // Generate one-time PreKeys
     for (let i = 0; i < count; i++) {
@@ -85,20 +85,23 @@ export class SignalProtocolService {
       const publicKeyData = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
       const privateKeyData = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
 
-      // Store in IndexedDB
-      await db.preKeys.add({
+      // Store in localStorage
+      preKeysStorage[i] = {
         id: i,
         keyId: i,
-        publicKey: JSON.stringify(publicKeyData),
-        privateKey: JSON.stringify(privateKeyData),
+        publicKey: publicKeyData,
+        privateKey: privateKeyData,
         createdAt: Date.now(),
-      });
+      };
 
       preKeys.push({
         id: i,
         publicKey: this.encodeKey(publicKeyData),
       });
     }
+
+    // Save all preKeys to localStorage
+    localStorage.setItem('signal_preKey', JSON.stringify(preKeysStorage));
 
     // Generate signed PreKey
     const signedKeyPair = await crypto.subtle.generateKey(
@@ -111,14 +114,24 @@ export class SignalProtocolService {
     );
 
     const signedPublicKeyData = await crypto.subtle.exportKey('jwk', signedKeyPair.publicKey);
+    const signedPrivateKeyData = await crypto.subtle.exportKey('jwk', signedKeyPair.privateKey);
     const signature = await this.signData(signedPublicKeyData);
 
+    // Store signed preKey
+    localStorage.setItem('signal_signedPreKey', JSON.stringify({
+      id: 1,
+      publicKey: signedPublicKeyData,
+      privateKey: signedPrivateKeyData,
+      signature,
+      createdAt: Date.now(),
+    }));
+
     // Get identity public key
-    const identity = await db.identity.get('local');
-    const identityKeys = JSON.parse(identity!.identityKeyPair);
+    const identityStr = localStorage.getItem('signal_identity');
+    const identityData = JSON.parse(identityStr!);
 
     return {
-      identityKey: this.encodeKey(identityKeys.public),
+      identityKey: this.encodeKey(identityData.identityKeyPair.public),
       signedPreKey: {
         id: 1,
         publicKey: this.encodeKey(signedPublicKeyData),
