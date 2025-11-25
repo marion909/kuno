@@ -83,6 +83,12 @@ export class BackupService {
       }
     }
 
+    console.log('Exported keys:', Object.keys(exported));
+    
+    if (Object.keys(exported).length === 0) {
+      throw new Error('No keys found to backup. Please login first to generate encryption keys.');
+    }
+
     return exported;
   }
 
@@ -90,13 +96,22 @@ export class BackupService {
    * Import Signal store keys from JSON
    */
   async importKeys(keys: any): Promise<void> {
+    console.log('Importing keys:', Object.keys(keys));
+    
+    if (!keys || Object.keys(keys).length === 0) {
+      throw new Error('No keys to import');
+    }
+
     const stores = ['identity', 'preKey', 'signedPreKey', 'session'];
 
     for (const storeName of stores) {
       if (keys[storeName]) {
         localStorage.setItem(`signal_${storeName}`, keys[storeName]);
+        console.log(`Imported ${storeName}`);
       }
     }
+    
+    console.log('Successfully imported all keys');
   }
 
   /**
@@ -107,9 +122,13 @@ export class BackupService {
       throw new Error('Passphrase must be at least 12 characters');
     }
 
+    console.log('Starting encryption...');
+
     // Export current keys
     const keys = await this.exportKeys();
     const keysJson = JSON.stringify(keys);
+    
+    console.log('Keys JSON length:', keysJson.length);
 
     // Generate salt and derive key
     const salt = this.generateSalt();
@@ -132,10 +151,17 @@ export class BackupService {
     combined.set(iv, 0);
     combined.set(new Uint8Array(encrypted), iv.length);
 
-    return {
+    const result = {
       encryptedKeys: this.arrayBufferToBase64(combined),
       salt: this.arrayBufferToBase64(salt),
     };
+    
+    console.log('Encryption complete:', {
+      encryptedKeysLength: result.encryptedKeys.length,
+      saltLength: result.salt.length
+    });
+
+    return result;
   }
 
   /**
