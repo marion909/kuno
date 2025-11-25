@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
+import { Settings } from './Settings';
 import './Chat.css';
 
 export function Chat() {
@@ -22,6 +23,7 @@ export function Chat() {
   const [messageText, setMessageText] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const typingTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -104,9 +106,14 @@ export function Chat() {
       <div className="sidebar">
         <div className="sidebar-header">
           <h2>🔐 Kuno</h2>
-          <button onClick={logout} className="logout-button">
-            Logout
-          </button>
+          <div className="header-actions">
+            <button onClick={() => setShowSettings(true)} className="settings-button" title="Settings">
+              ⚙️
+            </button>
+            <button onClick={logout} className="logout-button">
+              Logout
+            </button>
+          </div>
         </div>
         
         <div className="user-info">
@@ -286,6 +293,9 @@ export function Chat() {
           </div>
         )}
       </div>
+      
+      {/* Settings Modal */}
+      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

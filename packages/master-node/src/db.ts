@@ -78,6 +78,19 @@ export async function initDatabase() {
       ON message_reactions(message_id)
     `);
 
+    // Create key_backups table for encrypted key storage
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS key_backups (
+        id SERIAL PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        encrypted_keys TEXT NOT NULL,
+        salt VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id)
+      )
+    `);
+
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
