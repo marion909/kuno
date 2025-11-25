@@ -21,7 +21,7 @@ RUN if [ -d vendor ]; then \
     fi
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/*.go
 
 # Production stage
 FROM alpine:latest

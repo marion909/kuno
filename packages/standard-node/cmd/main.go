@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"time"
@@ -43,7 +44,7 @@ func main() {
 		log.Fatal("Failed to connect to CouchDB:", err)
 	}
 
-	db = client.DB("messages")
+	db = client.DB(context.Background(), "messages")
 	if err := db.Err(); err != nil {
 		log.Fatal("Failed to open messages database:", err)
 	}
