@@ -1,16 +1,17 @@
 #!/bin/bash
 # CouchDB Replication Setup Script using _replicate API
-# This avoids the local_endpoints_not_supported error
+# This script must be run from the host where Docker is running
 
 set -e
 
 echo "🔧 Setting up CouchDB Replication via _replicate API..."
 echo ""
 
-# Wait for CouchDB instances
+# Wait for CouchDB instances using docker exec
 echo "⏳ Waiting for CouchDB instances..."
 for i in 1 2 3; do
-  until curl -sf "http://couchdb-$i:5984/_up" > /dev/null; do
+  until docker exec kuno-couchdb-$i curl -sf "http://localhost:5984/_up" > /dev/null 2>&1; do
+    echo "Waiting for couchdb-$i..."
     sleep 2
   done
   echo "✓ couchdb-$i is ready"
