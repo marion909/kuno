@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../services/api';
 import { backupService } from '../services/backup';
@@ -9,40 +9,10 @@ export function Auth() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showRestore, setShowRestore] = useState(false);
-  const [hasBackup, setHasBackup] = useState(false);
   const [restorePassphrase, setRestorePassphrase] = useState('');
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const { register, login, isLoading, error } = useAuthStore();
-
-  // Check if user has backup after login
-  useEffect(() => {
-    if (username && password && isLogin) {
-      checkBackupStatus();
-    }
-  }, [username, password, isLogin]);
-
-  const checkBackupStatus = async () => {
-    if (!username || !password) return;
-    
-    try {
-      // Temporarily login to check backup status
-      const loginResult = await api.post<any>('/auth/login', {
-        username,
-        password,
-        deviceName: 'TempCheck',
-      });
-      
-      if (loginResult.success && loginResult.data?.token) {
-        api.setToken(loginResult.data.token);
-        const status = await api.get<{ hasBackup: boolean }>('/api/backup/status');
-        setHasBackup(status.hasBackup);
-      }
-    } catch (error) {
-      // Ignore errors during check
-      console.log('No backup check possible');
-    }
-  };
 
   const handleRestore = async () => {
     if (!restorePassphrase) {
@@ -55,7 +25,7 @@ export function Auth() {
 
     try {
       // Login first to get auth token
-      const loginResult = await api.post<any>('/auth/login', {
+      const loginResult = await api.post<any>('/api/auth/login', {
         username,
         password,
         deviceName: navigator.userAgent.substring(0, 50),
@@ -161,7 +131,7 @@ export function Auth() {
           </button>
         </div>
         
-        {isLogin && hasBackup && !showRestore && (
+        {isLogin && !showRestore && (
           <button
             className="restore-link"
             onClick={() => setShowRestore(true)}
