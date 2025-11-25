@@ -1,0 +1,25 @@
+{
+  "name": "kuno-messaging-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Decentralized encrypted messaging platform with Signal Protocol",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.dev.yml down"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
