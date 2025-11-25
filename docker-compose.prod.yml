@@ -102,10 +102,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       STANDARD_NODE_URLS: http://standard-node-1:4001,http://standard-node-2:4001,http://standard-node-3:4001
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
     networks:
       - kuno-network
     restart: unless-stopped
@@ -121,8 +119,7 @@ services:
       NODE_ID: "1"
       COUCHDB_URL: http://admin:${COUCHDB_PASSWORD}@couchdb-1:5984
     depends_on:
-      couchdb-1:
-        condition: service_healthy
+      - couchdb-1
     networks:
       - kuno-network
     restart: unless-stopped
@@ -137,8 +134,7 @@ services:
       NODE_ID: "2"
       COUCHDB_URL: http://admin:${COUCHDB_PASSWORD}@couchdb-2:5984
     depends_on:
-      couchdb-2:
-        condition: service_healthy
+      - couchdb-2
     networks:
       - kuno-network
     restart: unless-stopped
@@ -153,8 +149,7 @@ services:
       NODE_ID: "3"
       COUCHDB_URL: http://admin:${COUCHDB_PASSWORD}@couchdb-3:5984
     depends_on:
-      couchdb-3:
-        condition: service_healthy
+      - couchdb-3
     networks:
       - kuno-network
     restart: unless-stopped
