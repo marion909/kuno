@@ -60,6 +60,24 @@ export async function initDatabase() {
       )
     `);
 
+    // Create message_reactions table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS message_reactions (
+        id SERIAL PRIMARY KEY,
+        message_id VARCHAR(255) NOT NULL,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        emoji VARCHAR(10) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(message_id, user_id, emoji)
+      )
+    `);
+
+    // Create index on message_reactions for faster lookups
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_message_reactions_message_id 
+      ON message_reactions(message_id)
+    `);
+
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

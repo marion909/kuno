@@ -12,8 +12,9 @@ export interface Message {
   senderUsername: string;
   text: string;
   timestamp: number;
-  status: 'sending' | 'sent' | 'delivered';
+  status: 'sending' | 'sent' | 'delivered' | 'read';
   isOwn: boolean;
+  reactions?: Array<{ emoji: string; count: number; users: string[] }>;
 }
 
 export interface Conversation {
@@ -28,6 +29,7 @@ interface ChatState {
   conversations: Map<string, Conversation>;
   messages: Map<string, Message[]>;
   activeConversation: string | null;
+  typingUsers: Map<string, boolean>; // username -> isTyping
   
   initializeChat: () => void;
   setActiveConversation: (username: string) => void;
@@ -35,6 +37,12 @@ interface ChatState {
   addMessage: (message: Message) => void;
   handleIncomingMessage: (payload: any) => Promise<void>;
   handleMessageAck: (payload: any) => void;
+  handleTyping: (payload: any) => void;
+  handleReadReceipt: (payload: any) => void;
+  sendTypingIndicator: (recipientUsername: string, isTyping: boolean) => void;
+  sendReadReceipt: (messageId: string, senderUsername: string) => void;
+  addReaction: (messageId: string, emoji: string) => Promise<void>;
+  removeReaction: (messageId: string, emoji: string) => Promise<void>;
   fetchStoredMessages: () => Promise<void>;
 }
 
@@ -42,6 +50,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   conversations: new Map(),
   messages: new Map(),
   activeConversation: null,
+  typingUsers: new Map(),
 
   initializeChat: () => {
     // Listen for incoming messages
@@ -52,6 +61,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         get().handleIncomingMessage(payload);
       } else if (type === 'message_ack') {
         get().handleMessageAck(payload);
+      } else if (type === 'typing') {
+        get().handleTyping(payload);
+      } else if (type === 'read_receipt') {
+        get().handleReadReceipt(payload);
       }
     });
     
@@ -175,6 +188,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       };
       
       get().addMessage(message);
+      
+      // Send read receipt if this is the active conversation
+      const state = get();
+      if (state.activeConversation === payload.senderUsername) {
+        get().sendReadReceipt(message.id, payload.senderUsername);
+      }
     } catch (error) {
       console.error('Failed to decrypt message:', error);
     }
@@ -239,6 +258,113 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to fetch stored messages:', error);
+    }
+  },
+
+  handleTyping: (payload: any) => {
+    const { username, isTyping } = payload;
+    set((state) => {
+      const typingUsers = new Map(state.typingUsers);
+      if (isTyping) {
+        typingUsers.set(username, true);
+        // Auto-clear after 3 seconds
+        setTimeout(() => {
+          set((s) => {
+            const updated = new Map(s.typingUsers);
+            updated.delete(username);
+            return { typingUsers: updated };
+          });
+        }, 3000);
+      } else {
+        typingUsers.delete(username);
+      }
+      return { typingUsers };
+    });
+  },
+
+  handleReadReceipt: (payload: any) => {
+    const { messageId } = payload;
+    set((state) => {
+      const messages = new Map(state.messages);
+      
+      // Find and update message status
+      for (const [conversationId, conversationMessages] of messages.entries()) {
+        const messageIndex = conversationMessages.findIndex(m => m.id === messageId);
+        
+        if (messageIndex !== -1) {
+          conversationMessages[messageIndex].status = 'read';
+          messages.set(conversationId, [...conversationMessages]);
+          break;
+        }
+      }
+      
+      return { messages };
+    });
+  },
+
+  sendTypingIndicator: (recipientUsername: string, isTyping: boolean) => {
+    try {
+      websocket.send('typing', { recipientUsername, isTyping });
+    } catch (error) {
+      console.error('Failed to send typing indicator:', error);
+    }
+  },
+
+  sendReadReceipt: (messageId: string, senderUsername: string) => {
+    try {
+      websocket.send('read_receipt', { messageId, senderUsername });
+    } catch (error) {
+      console.error('Failed to send read receipt:', error);
+    }
+  },
+
+  addReaction: async (messageId: string, emoji: string) => {
+    try {
+      const response = await api.post('/api/reactions', { messageId, emoji });
+      
+      // Update message reactions
+      set((state) => {
+        const messages = new Map(state.messages);
+        
+        for (const [conversationId, conversationMessages] of messages.entries()) {
+          const messageIndex = conversationMessages.findIndex(m => m.id === messageId);
+          
+          if (messageIndex !== -1) {
+            conversationMessages[messageIndex].reactions = response.data.reactions;
+            messages.set(conversationId, [...conversationMessages]);
+            break;
+          }
+        }
+        
+        return { messages };
+      });
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+  },
+
+  removeReaction: async (messageId: string, emoji: string) => {
+    try {
+      const response = await api.delete('/api/reactions', { data: { messageId, emoji } });
+      
+      // Update message reactions
+      set((state) => {
+        const messages = new Map(state.messages);
+        
+        for (const [conversationId, conversationMessages] of messages.entries()) {
+          const messageIndex = conversationMessages.findIndex(m => m.id === messageId);
+          
+          if (messageIndex !== -1) {
+            conversationMessages[messageIndex].reactions = response.data.reactions;
+            messages.set(conversationId, [...conversationMessages]);
+            break;
+          }
+        }
+        
+        return { messages };
+      });
+    } catch (error) {
+      console.error('Failed to remove reaction:', error);
     }
   },
 }));

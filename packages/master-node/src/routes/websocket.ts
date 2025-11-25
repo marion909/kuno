@@ -103,6 +103,10 @@ async function handleWebSocketMessage(app: FastifyInstance, sender: Client, data
       await handleTyping(sender, payload);
       break;
 
+    case 'read_receipt':
+      await handleReadReceipt(sender, payload);
+      break;
+
     case 'presence':
       await handlePresence(sender, payload);
       break;
@@ -197,8 +201,66 @@ async function handleSendMessage(app: FastifyInstance, sender: Client, payload: 
 async function handleTyping(sender: Client, payload: any) {
   const { recipientUsername, isTyping } = payload;
 
-  // Get recipient user ID and forward typing indicator
-  // TODO: Implement typing indicator forwarding
+  // Find recipient clients
+  let recipientUserId: string | null = null;
+  
+  // Search through all clients to find matching username
+  for (const [userId, userClients] of clients.entries()) {
+    if (userClients.some(c => c.username === recipientUsername)) {
+      recipientUserId = userId;
+      break;
+    }
+  }
+
+  if (!recipientUserId) {
+    return; // Recipient not online, ignore typing indicator
+  }
+
+  // Forward typing indicator to all recipient devices
+  const recipientClients = clients.get(recipientUserId) || [];
+  for (const recipient of recipientClients) {
+    recipient.socket.send(JSON.stringify({
+      type: 'typing',
+      payload: {
+        username: sender.username,
+        isTyping,
+      },
+    }));
+  }
+}
+
+/**
+ * Handle read receipts
+ */
+async function handleReadReceipt(sender: Client, payload: any) {
+  const { messageId, senderUsername } = payload;
+
+  // Find sender clients (the original message sender)
+  let originalSenderUserId: string | null = null;
+  
+  for (const [userId, userClients] of clients.entries()) {
+    if (userClients.some(c => c.username === senderUsername)) {
+      originalSenderUserId = userId;
+      break;
+    }
+  }
+
+  if (!originalSenderUserId) {
+    return; // Original sender not online, ignore read receipt
+  }
+
+  // Forward read receipt to all original sender devices
+  const senderClients = clients.get(originalSenderUserId) || [];
+  for (const recipient of senderClients) {
+    recipient.socket.send(JSON.stringify({
+      type: 'read_receipt',
+      payload: {
+        messageId,
+        readBy: sender.username,
+        readAt: Date.now(),
+      },
+    }));
+  }
 }
 
 /**

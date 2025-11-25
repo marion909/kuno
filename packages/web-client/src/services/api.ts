@@ -102,6 +102,27 @@ export class ApiService {
   async getPreKeyStatus(): Promise<any> {
     return this.request('/api/keys/status');
   }
+
+  // Generic HTTP methods for flexible use
+  async post<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T = any>(endpoint: string, options?: { data?: any }): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      body: options?.data ? JSON.stringify(options.data) : undefined,
+    });
+  }
+
+  async get<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'GET',
+    });
+  }
 }
 
 export const api = new ApiService();

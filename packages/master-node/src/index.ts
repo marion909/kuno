@@ -7,6 +7,7 @@ import { initDatabase, pool } from './db';
 import { authRoutes } from './routes/auth';
 import { keyRoutes } from './routes/keys';
 import { websocketRoutes } from './routes/websocket';
+import { reactionRoutes } from './routes/reactions';
 
 const app = Fastify({
   logger: true,
@@ -60,6 +61,7 @@ async function start() {
     await app.register(authRoutes);
     await app.register(keyRoutes);
     await app.register(websocketRoutes);
+    await app.register(reactionRoutes);
     
     // TODO: Register additional routes
     // - /api/nodes (node registry)
