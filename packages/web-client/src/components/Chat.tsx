@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import './Chat.css';
@@ -9,18 +9,45 @@ export function Chat() {
     conversations,
     messages,
     activeConversation,
+    typingUsers,
     setActiveConversation,
     sendMessage,
+    sendTypingIndicator,
+    addReaction,
+    removeReaction,
     initializeChat,
   } = useChatStore();
 
   const [newConversation, setNewConversation] = useState('');
   const [messageText, setMessageText] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     initializeChat();
   }, [initializeChat]);
+
+  const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageText(e.target.value);
+    
+    // Send typing indicator
+    if (activeConversation && e.target.value.length > 0) {
+      sendTypingIndicator(activeConversation, true);
+      
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Stop typing after 3 seconds of inactivity
+      typingTimeoutRef.current = window.setTimeout(() => {
+        sendTypingIndicator(activeConversation, false);
+      }, 3000);
+    } else if (activeConversation) {
+      sendTypingIndicator(activeConversation, false);
+    }
+  };
 
   const handleStartConversation = () => {
     if (newConversation.trim()) {
@@ -35,6 +62,12 @@ export function Chat() {
     
     if (!messageText.trim() || !activeConversation) return;
     
+    // Clear typing indicator
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    sendTypingIndicator(activeConversation, false);
+    
     try {
       await sendMessage(activeConversation, messageText.trim());
       setMessageText('');
@@ -42,6 +75,20 @@ export function Chat() {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
     }
+  };
+
+  const handleReactionClick = async (messageId: string, emoji: string) => {
+    const message = activeMessages.find(m => m.id === messageId);
+    const hasReacted = message?.reactions?.some(r => 
+      r.emoji === emoji && r.users.includes(user?.username || '')
+    );
+    
+    if (hasReacted) {
+      await removeReaction(messageId, emoji);
+    } else {
+      await addReaction(messageId, emoji);
+    }
+    setShowEmojiPicker(null);
   };
 
   const activeMessages = activeConversation 
@@ -155,11 +202,52 @@ export function Chat() {
                           minute: '2-digit' 
                         })}
                         {msg.isOwn && (
-                          <span className="message-status">
+                          <span className={`message-status ${msg.status === 'read' ? 'read' : ''}`}>
                             {msg.status === 'sending' && ' ⏳'}
                             {msg.status === 'sent' && ' ✓'}
                             {msg.status === 'delivered' && ' ✓✓'}
+                            {msg.status === 'read' && ' ✓✓'}
                           </span>
+                        )}
+                      </div>
+                      
+                      {/* Reactions Display */}
+                      {msg.reactions && msg.reactions.length > 0 && (
+                        <div className="message-reactions">
+                          {msg.reactions.map((reaction) => (
+                            <button
+                              key={reaction.emoji}
+                              className="reaction-bubble"
+                              onClick={() => handleReactionClick(msg.id, reaction.emoji)}
+                              title={reaction.users.join(', ')}
+                            >
+                              {reaction.emoji} {reaction.count}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Reaction Picker Button */}
+                      <div className="message-actions">
+                        <button 
+                          className="add-reaction-btn"
+                          onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
+                        >
+                          😊+
+                        </button>
+                        
+                        {showEmojiPicker === msg.id && (
+                          <div className="emoji-picker">
+                            {['❤️', '👍', '😂', '😮', '😢', '🙏', '🔥', '🎉'].map(emoji => (
+                              <button
+                                key={emoji}
+                                className="emoji-option"
+                                onClick={() => handleReactionClick(msg.id, emoji)}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -168,12 +256,22 @@ export function Chat() {
               )}
             </div>
 
+            {/* Typing Indicator */}
+            {activeConversation && typingUsers.get(activeConversation) && (
+              <div className="typing-indicator">
+                <span className="typing-text">{activeConversation} is typing</span>
+                <span className="typing-dots">
+                  <span>.</span><span>.</span><span>.</span>
+                </span>
+              </div>
+            )}
+
             <form className="message-input-form" onSubmit={handleSendMessage}>
               <input
                 type="text"
                 placeholder="Type a message..."
                 value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
+                onChange={handleMessageInputChange}
                 className="message-input"
               />
               <button type="submit" className="send-button">
