@@ -25,7 +25,7 @@ export const Settings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const loadBackupStatus = async () => {
     try {
-      const status = await api.get<BackupStatus>('/backup/status');
+      const status = await api.get<BackupStatus>('/api/backup/status');
       setBackupStatus(status);
     } catch (error) {
       console.error('Failed to load backup status:', error);
@@ -57,7 +57,7 @@ export const Settings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       const { encryptedKeys, salt } = await backupService.encryptKeys(passphrase);
 
       // Upload to server
-      await api.post('/backup/create', { encryptedKeys, salt });
+      await api.post('/api/backup/create', { encryptedKeys, salt });
 
       setMessage({ type: 'success', text: 'Backup created successfully!' });
       setPassphrase('');
@@ -81,7 +81,7 @@ export const Settings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     try {
       // Fetch encrypted backup
-      const backup = await api.get<{ encryptedKeys: string; salt: string; createdAt: string; updatedAt: string }>('/backup/restore');
+      const backup = await api.get<{ encryptedKeys: string; salt: string; createdAt: string; updatedAt: string }>('/api/backup/restore');
 
       // Decrypt keys locally
       const keys = await backupService.decryptKeys(backup.encryptedKeys, backup.salt, passphrase);
@@ -103,7 +103,7 @@ export const Settings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     setMessage(null);
 
     try {
-      await api.delete('/backup/delete');
+      await api.delete('/api/backup/delete');
       setMessage({ type: 'success', text: 'Backup deleted successfully' });
       setShowConfirmDelete(false);
       await loadBackupStatus();

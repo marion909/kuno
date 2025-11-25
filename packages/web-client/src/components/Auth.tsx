@@ -35,7 +35,7 @@ export function Auth() {
       
       if (loginResult.success && loginResult.data?.token) {
         api.setToken(loginResult.data.token);
-        const status = await api.get<{ hasBackup: boolean }>('/backup/status');
+        const status = await api.get<{ hasBackup: boolean }>('/api/backup/status');
         setHasBackup(status.hasBackup);
       }
     } catch (error) {
@@ -68,7 +68,7 @@ export function Auth() {
       api.setToken(loginResult.data.token);
 
       // Fetch encrypted backup
-      const backup = await api.get<{ encryptedKeys: string; salt: string }>('/backup/restore');
+      const backup = await api.get<{ encryptedKeys: string; salt: string }>('/api/backup/restore');
 
       // Decrypt keys locally
       const keys = await backupService.decryptKeys(
