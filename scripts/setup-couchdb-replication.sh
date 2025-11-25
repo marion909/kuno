@@ -45,7 +45,7 @@ curl -X PUT "$COUCH1/_replicator/node1-to-node2" \
   -H "Content-Type: application/json" \
   -d "{
     \"source\": \"$DB_NAME\",
-    \"target\": \"$COUCH2/$DB_NAME\",
+    \"target\": \"http://${COUCHDB_USER}:${COUCHDB_PASSWORD}@couchdb-2:5984/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
@@ -54,7 +54,7 @@ curl -X PUT "$COUCH2/_replicator/node2-to-node1" \
   -H "Content-Type: application/json" \
   -d "{
     \"source\": \"$DB_NAME\",
-    \"target\": \"$COUCH1/$DB_NAME\",
+    \"target\": \"http://${COUCHDB_USER}:${COUCHDB_PASSWORD}@couchdb-1:5984/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
@@ -65,7 +65,7 @@ curl -X PUT "$COUCH2/_replicator/node2-to-node3" \
   -H "Content-Type: application/json" \
   -d "{
     \"source\": \"$DB_NAME\",
-    \"target\": \"$COUCH3/$DB_NAME\",
+    \"target\": \"http://${COUCHDB_USER}:${COUCHDB_PASSWORD}@couchdb-3:5984/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
@@ -74,7 +74,7 @@ curl -X PUT "$COUCH3/_replicator/node3-to-node2" \
   -H "Content-Type: application/json" \
   -d "{
     \"source\": \"$DB_NAME\",
-    \"target\": \"$COUCH2/$DB_NAME\",
+    \"target\": \"http://${COUCHDB_USER}:${COUCHDB_PASSWORD}@couchdb-2:5984/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
@@ -85,7 +85,7 @@ curl -X PUT "$COUCH1/_replicator/node1-to-node3" \
   -H "Content-Type: application/json" \
   -d "{
     \"source\": \"$DB_NAME\",
-    \"target\": \"$COUCH3/$DB_NAME\",
+    \"target\": \"http://${COUCHDB_USER}:${COUCHDB_PASSWORD}@couchdb-3:5984/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
@@ -94,7 +94,7 @@ curl -X PUT "$COUCH3/_replicator/node3-to-node1" \
   -H "Content-Type: application/json" \
   -d "{
     \"source\": \"$DB_NAME\",
-    \"target\": \"$COUCH1/$DB_NAME\",
+    \"target\": \"http://${COUCHDB_USER}:${COUCHDB_PASSWORD}@couchdb-1:5984/$DB_NAME\",
     \"continuous\": true,
     \"create_target\": false
   }"
