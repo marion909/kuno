@@ -25,11 +25,15 @@ sudo apt install docker-compose-plugin -y
 ### 2. Repository auf Server kopieren
 
 ```bash
-# Option A: Via Git
+# Option A: Via Git (HTTPS - einfacher, keine SSH-Keys nötig)
+git clone https://github.com/marion909/kuno.git /opt/kuno
+cd /opt/kuno
+
+# Option B: Via Git mit SSH (benötigt SSH-Key auf Server)
 git clone git@github.com:marion909/kuno.git /opt/kuno
 cd /opt/kuno
 
-# Option B: Via rsync von lokalem PC
+# Option C: Via rsync von lokalem PC
 rsync -avz --exclude node_modules --exclude .git \
   C:\Projekte\Kuno/ user@server:/opt/kuno/
 ```
