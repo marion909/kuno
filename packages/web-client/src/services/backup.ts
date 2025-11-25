@@ -54,12 +54,19 @@ export class BackupService {
    * Convert base64 string to Uint8Array
    */
   private base64ToArrayBuffer(base64: string): Uint8Array {
-    const binary = window.atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+    try {
+      // Ensure base64 string is properly padded
+      const paddedBase64 = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+      const binary = window.atob(paddedBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    } catch (error) {
+      console.error('Failed to decode base64:', base64.substring(0, 50) + '...');
+      throw new Error('Invalid base64 encoding');
     }
-    return bytes;
   }
 
   /**
@@ -139,19 +146,29 @@ export class BackupService {
     salt: string,
     passphrase: string
   ): Promise<any> {
-    // Decode
-    const saltBytes = this.base64ToArrayBuffer(salt);
-    const combined = this.base64ToArrayBuffer(encryptedKeys);
-
-    // Extract IV and encrypted data
-    const iv = combined.slice(0, 12);
-    const encryptedData = combined.slice(12);
-
-    // Derive key
-    const key = await this.deriveKey(passphrase, saltBytes);
-
-    // Decrypt
     try {
+      console.log('Decrypting keys...', { 
+        encryptedKeysLength: encryptedKeys.length, 
+        saltLength: salt.length 
+      });
+
+      // Decode
+      const saltBytes = this.base64ToArrayBuffer(salt);
+      const combined = this.base64ToArrayBuffer(encryptedKeys);
+
+      // Extract IV and encrypted data
+      const iv = combined.slice(0, 12);
+      const encryptedData = combined.slice(12);
+
+      console.log('Decoded data:', { 
+        ivLength: iv.length, 
+        encryptedDataLength: encryptedData.length 
+      });
+
+      // Derive key
+      const key = await this.deriveKey(passphrase, saltBytes);
+
+      // Decrypt
       const decrypted = await window.crypto.subtle.decrypt(
         {
           name: 'AES-GCM',
@@ -164,7 +181,11 @@ export class BackupService {
       const decoder = new TextDecoder();
       const keysJson = decoder.decode(decrypted);
       return JSON.parse(keysJson);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Decryption error:', error);
+      if (error.message === 'Invalid base64 encoding') {
+        throw new Error('Backup data is corrupted. Please create a new backup.');
+      }
       throw new Error('Failed to decrypt keys. Wrong passphrase?');
     }
   }
