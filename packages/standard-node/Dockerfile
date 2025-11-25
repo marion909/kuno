@@ -9,7 +9,9 @@ WORKDIR /app
 # Copy go mod files
 COPY go.mod go.sum ./
 
-# Download dependencies
+# Download dependencies with fallback to direct GitHub
+ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOPRIVATE=""
 RUN go mod download
 
 # Copy source
