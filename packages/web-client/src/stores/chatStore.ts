@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { websocket } from '../services/websocket';
 import { signalService } from '../services/signal';
 import { api } from '../services/api';
+import { standardNodeService } from '../services/standardNode';
+import { useAuthStore } from './authStore';
 
 export interface Message {
   id: string;
@@ -33,6 +35,7 @@ interface ChatState {
   addMessage: (message: Message) => void;
   handleIncomingMessage: (payload: any) => Promise<void>;
   handleMessageAck: (payload: any) => void;
+  fetchStoredMessages: () => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -51,6 +54,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         get().handleMessageAck(payload);
       }
     });
+    
+    // Fetch stored messages from Standard Nodes
+    get().fetchStoredMessages();
   },
 
   setActiveConversation: (username: string) => {
@@ -194,5 +200,45 @@ export const useChatStore = create<ChatState>((set, get) => ({
       
       return { messages };
     });
+  },
+
+  fetchStoredMessages: async () => {
+    try {
+      const user = useAuthStore.getState().user;
+      if (!user) return;
+      
+      // Fetch stored messages from Standard Nodes
+      const storedMessages = await standardNodeService.getMessagesForUser(user.id);
+      
+      // Decrypt and add messages
+      for (const storedMsg of storedMessages) {
+        try {
+          const plaintext = await signalService.decrypt(
+            storedMsg.encryptedPayload,
+            storedMsg.messageType as 'prekey' | 'whisper'
+          );
+          
+          const message: Message = {
+            id: storedMsg.id,
+            conversationId: storedMsg.senderUsername,
+            senderId: storedMsg.senderId,
+            senderUsername: storedMsg.senderUsername,
+            text: plaintext,
+            timestamp: storedMsg.timestamp,
+            status: 'delivered',
+            isOwn: false,
+          };
+          
+          get().addMessage(message);
+          
+          // Delete message after successful retrieval
+          await standardNodeService.deleteMessage(storedMsg.id);
+        } catch (error) {
+          console.error('Failed to decrypt stored message:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch stored messages:', error);
+    }
   },
 }));

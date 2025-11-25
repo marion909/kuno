@@ -1,0 +1,9 @@
+FROM curlimages/curl:latest
+
+USER root
+RUN apk add --no-cache bash jq
+
+COPY scripts/setup-couchdb-replication.sh /setup.sh
+RUN chmod +x /setup.sh
+
+CMD ["/setup.sh"]

@@ -100,10 +100,15 @@ services:
       DATABASE_URL: postgresql://kuno:${POSTGRES_PASSWORD}@postgres:5432/kuno
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
-      STANDARD_NODE_URLS: http://standard-node-1:4001,http://standard-node-2:4001,http://standard-node-3:4001
+      STANDARD_NODE_1_URL: ${STANDARD_NODE_1_URL:-http://standard-node-1:4001}
+      STANDARD_NODE_2_URL: ${STANDARD_NODE_2_URL:-http://standard-node-2:4002}
+      STANDARD_NODE_3_URL: ${STANDARD_NODE_3_URL:-http://standard-node-3:4003}
     depends_on:
       - postgres
       - redis
+      - standard-node-1
+      - standard-node-2
+      - standard-node-3
     networks:
       - kuno-network
     restart: unless-stopped
@@ -160,7 +165,10 @@ services:
       context: .
       dockerfile: ./packages/web-client/Dockerfile
       args:
-        VITE_API_URL: https://npanel.at
+        VITE_API_URL: https://${DOMAIN}
+        VITE_STANDARD_NODE_1_URL: https://${DOMAIN}/node1
+        VITE_STANDARD_NODE_2_URL: https://${DOMAIN}/node2
+        VITE_STANDARD_NODE_3_URL: https://${DOMAIN}/node3
     container_name: kuno-nginx
     ports:
       - "80:80"
@@ -173,6 +181,22 @@ services:
     networks:
       - kuno-network
     restart: unless-stopped
+
+  # CouchDB Replication Setup (runs once)
+  couchdb-replication:
+    build:
+      context: .
+      dockerfile: ./scripts/Dockerfile.replication
+    container_name: kuno-couchdb-replication
+    environment:
+      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD}
+    depends_on:
+      - couchdb-1
+      - couchdb-2
+      - couchdb-3
+    networks:
+      - kuno-network
+    restart: "no"
 
 networks:
   kuno-network:

@@ -22,7 +22,13 @@ RUN npm run build
 # Build web-client with production API URL
 WORKDIR /app/packages/web-client
 ARG VITE_API_URL=https://npanel.at
+ARG VITE_STANDARD_NODE_1_URL=https://npanel.at/node1
+ARG VITE_STANDARD_NODE_2_URL=https://npanel.at/node2
+ARG VITE_STANDARD_NODE_3_URL=https://npanel.at/node3
 ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_STANDARD_NODE_1_URL=${VITE_STANDARD_NODE_1_URL}
+ENV VITE_STANDARD_NODE_2_URL=${VITE_STANDARD_NODE_2_URL}
+ENV VITE_STANDARD_NODE_3_URL=${VITE_STANDARD_NODE_3_URL}
 RUN npm run build
 
 # Production stage with nginx
