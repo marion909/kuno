@@ -38,12 +38,18 @@ export function Auth() {
       api.setToken(loginResult.data.token);
 
       // Fetch encrypted backup
-      const backup = await api.get<{ encryptedKeys: string; salt: string }>('/api/backup/restore');
+      const response = await api.get<{ success: boolean; data: { encryptedKeys: string; salt: string } }>('/api/backup/restore');
+      
+      console.log('Backup response:', response);
+      
+      if (!response?.data?.encryptedKeys || !response?.data?.salt) {
+        throw new Error('Invalid backup data received from server');
+      }
 
       // Decrypt keys locally
       const keys = await backupService.decryptKeys(
-        backup.encryptedKeys,
-        backup.salt,
+        response.data.encryptedKeys,
+        response.data.salt,
         restorePassphrase
       );
 

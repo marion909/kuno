@@ -81,10 +81,16 @@ export const Settings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     try {
       // Fetch encrypted backup
-      const backup = await api.get<{ encryptedKeys: string; salt: string; createdAt: string; updatedAt: string }>('/api/backup/restore');
+      const response = await api.get<{ success: boolean; data: { encryptedKeys: string; salt: string; createdAt: string; updatedAt: string } }>('/api/backup/restore');
+      
+      console.log('Backup response:', response);
+      
+      if (!response?.data?.encryptedKeys || !response?.data?.salt) {
+        throw new Error('Invalid backup data received from server');
+      }
 
       // Decrypt keys locally
-      const keys = await backupService.decryptKeys(backup.encryptedKeys, backup.salt, passphrase);
+      const keys = await backupService.decryptKeys(response.data.encryptedKeys, response.data.salt, passphrase);
 
       // Import to localStorage
       await backupService.importKeys(keys);
@@ -92,6 +98,7 @@ export const Settings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setMessage({ type: 'success', text: 'Keys restored successfully! Please reload the page.' });
       setPassphrase('');
     } catch (error: any) {
+      console.error('Restore error:', error);
       setMessage({ type: 'error', text: error.message || 'Failed to restore backup. Wrong passphrase?' });
     } finally {
       setLoading(false);
